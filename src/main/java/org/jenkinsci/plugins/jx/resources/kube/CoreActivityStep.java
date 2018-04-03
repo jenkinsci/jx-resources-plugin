@@ -16,8 +16,6 @@
  */
 package org.jenkinsci.plugins.jx.resources.kube;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 /**
  */
 public class CoreActivityStep extends DtoSupport {

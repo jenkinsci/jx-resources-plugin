@@ -30,7 +30,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
-import org.apache.commons.jexl.util.ArrayListWrapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,6 +63,10 @@ public class PipelineActivitySpec implements KubernetesResource {
     @JsonAnyGetter
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
     @JsonAnySetter
@@ -178,9 +181,5 @@ public class PipelineActivitySpec implements KubernetesResource {
 
     public void setSteps(List<PipelineActivityStep> steps) {
         this.steps = steps;
-    }
-
-    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
-        this.additionalProperties = additionalProperties;
     }
 }

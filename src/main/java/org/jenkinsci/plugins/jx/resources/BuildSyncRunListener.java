@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.jx.resources;
 
 import com.cloudbees.workflow.rest.external.RunExt;
+import com.cloudbees.workflow.rest.external.StageNodeExt;
+import com.cloudbees.workflow.rest.external.StatusExt;
 import hudson.Extension;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -20,12 +22,17 @@ import org.jenkinsci.plugins.jx.resources.kube.KubernetesNames;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivity;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityList;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitySpec;
+import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityStep;
+import org.jenkinsci.plugins.jx.resources.kube.StageActivityStep;
 import org.jenkinsci.plugins.jx.resources.kube.Statuses;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +43,7 @@ import static java.util.logging.Level.WARNING;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.formatTimestamp;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesClient;
+import static org.jenkinsci.plugins.jx.resources.MarkupUtils.toYaml;
 
 /**
  * Listens to Jenkins Job build {@link Run} and updates the PipelineActivity resource
@@ -114,7 +122,6 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (shouldPollRun(run)) {
             runsToPoll.remove(run);
             pollRun(run);
-            logger.info("onCompleted " + run.getUrl());
         }
         super.onCompleted(run, listener);
     }
@@ -124,7 +131,6 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (shouldPollRun(run)) {
             runsToPoll.remove(run);
             pollRun(run);
-            logger.info("onDeleted " + run.getUrl());
         }
         super.onDeleted(run);
     }
@@ -134,7 +140,6 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (shouldPollRun(run)) {
             runsToPoll.remove(run);
             pollRun(run);
-            logger.info("onFinalized " + run.getUrl());
         }
         super.onFinalized(run);
     }
@@ -185,7 +190,8 @@ public class BuildSyncRunListener extends RunListener<Run> {
         String namespace = GlobalPluginConfiguration.get().getNamespace();
         NonNamespaceOperation<PipelineActivity, PipelineActivityList, DoneablePipelineActivities, Resource<PipelineActivity, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClent, namespace);
 
-        String runName = run.getParent().getFullName() + "-" + run.getNumber();
+        String parentFullName = run.getParent().getFullName();
+        String runName = parentFullName + "-" + run.getNumber();
         String name = KubernetesNames.convertToKubernetesName(runName, false);
 
         boolean create = false;
@@ -200,6 +206,7 @@ public class BuildSyncRunListener extends RunListener<Run> {
             spec = new PipelineActivitySpec();
             activity.setSpec(spec);
         }
+        String oldYaml = create ? "" : toYamlOrRandom(spec);
         String status = getStatus(run);
         spec.setStatus(status);
         if (isBlank(spec.getStartedTimestamp())) {
@@ -208,9 +215,95 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (isBlank(spec.getCompletedTimestamp()) && Statuses.isCompleted(status)) {
             spec.setCompletedTimestamp(completionTime);
         }
+        if (isBlank(spec.getPipeline())) {
+            spec.setPipeline(parentFullName);
+        }
+        if (isBlank(spec.getBuild())) {
+            spec.setBuild("" + run.getNumber());
+        }
 
-        client.createOrReplace(activity);
-        logger.log(INFO, (create ? "Created" : "Updated") + "  pipeline activity " + name);
+        List<StageNodeExt> stages = wfRunExt.getStages();
+        if (stages != null) {
+            int i = 0;
+            for (StageNodeExt stage : stages) {
+                String stageStatus = getStageStatus(stage.getStatus());
+                StageActivityStep stageStep = getOrCreateStage(spec, i++);
+                if (stageStep != null) {
+                    stageStep.setStatus(stageStatus);
+                    stageStep.setName(stage.getName());
+                    if (isBlank(stageStep.getStartedTimestamp())) {
+                        stageStep.setStartedTimestamp(formatTimestamp(stage.getStartTimeMillis()));
+                    }
+                    if (isBlank(stageStep.getCompletedTimestamp()) && Statuses.isCompleted(stageStatus)) {
+                        stageStep.setCompletedTimestamp(formatTimestamp(stage.getStartTimeMillis() + stage.getDurationMillis()));
+                    }
+                }
+            }
+        }
+
+        String newYaml = create ? "" : toYamlOrRandom(spec);
+        if (create || !oldYaml.equals(newYaml)) {
+            client.createOrReplace(activity);
+            logger.log(INFO, (create ? "Created" : "Updated") + "  pipeline activity " + name);
+        }
+    }
+
+    protected String toYamlOrRandom(Object data) {
+        try {
+            return toYaml(data);
+        } catch (IOException e) {
+            logger.log(WARNING, "Could not marshal Object " + data + " to YAML: " + e, e);
+            return UUID.randomUUID().toString();
+        }
+    }
+
+    private StageActivityStep getOrCreateStage(PipelineActivitySpec spec, int index) {
+        int i = 0;
+        List<PipelineActivityStep> steps = spec.getSteps();
+        for (PipelineActivityStep step : steps) {
+            StageActivityStep stage = step.getStage();
+            if (stage != null) {
+                if (i++ == index) {
+                    return stage;
+                }
+            }
+        }
+        StageActivityStep answer = null;
+        while (i <= index) {
+            PipelineActivityStep step = new PipelineActivityStep();
+            step.setKind("stage");
+            StageActivityStep stage = new StageActivityStep();
+            step.setStage(stage);
+            steps.add(step);
+            answer = stage;
+            i++;
+        }
+        spec.setSteps(steps);
+        return answer;
+    }
+
+    private String getStageStatus(StatusExt status) {
+        if (status == null) {
+            return "";
+        }
+        switch (status) {
+            case ABORTED:
+                return Statuses.ABORTED;
+            case NOT_EXECUTED:
+                return Statuses.NOT_EXECUTED;
+            case SUCCESS:
+                return Statuses.SUCCEEDED;
+            case IN_PROGRESS:
+                return Statuses.PENDING;
+            case PAUSED_PENDING_INPUT:
+                return Statuses.WAITING_FOR_APPROVAL;
+            case FAILED:
+                return Statuses.FAILED;
+            case UNSTABLE:
+                return Statuses.UNSTABLE;
+            default:
+                return "";
+        }
     }
 
     private String getStatus(Run run) {

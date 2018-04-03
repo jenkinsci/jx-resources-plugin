@@ -26,6 +26,8 @@ public class Statuses {
     public static final String ABORTED = "Aborted";
     public static final String ERROR = "Error";
     public static final String WAITING_FOR_APPROVAL = "WaitingForApproval";
+    public static final String NOT_EXECUTED = "NotExecuted";
+    public static final String UNSTABLE = "Unstable";
 
     /**
      * Returns true if the pipeline has completed running

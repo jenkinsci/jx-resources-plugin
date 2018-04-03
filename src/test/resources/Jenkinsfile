@@ -1,0 +1,11 @@
+node {
+  stage('CI Build') {
+    sh "echo starting"
+    sh "sleep 20"
+  }
+
+  stage('Promote to Environments') {
+    sh "echo promoting"
+    sh "sleep 50"
+  }
+}
