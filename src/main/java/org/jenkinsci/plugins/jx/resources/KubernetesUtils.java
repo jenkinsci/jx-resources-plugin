@@ -25,12 +25,13 @@ public class KubernetesUtils {
      * @param serverUrl the optional URL of where the OpenShift cluster API server is running
      */
     protected static KubernetesClient initializeKubernetesClient(String serverUrl) {
-        ConfigBuilder configBuilder = new ConfigBuilder();
         if (serverUrl != null && !serverUrl.isEmpty()) {
+            ConfigBuilder configBuilder = new ConfigBuilder();
             configBuilder.withMasterUrl(serverUrl);
+            Config config = configBuilder.build();
+            return new DefaultKubernetesClient(config);
         }
-        Config config = configBuilder.build();
-        return new DefaultKubernetesClient(config);
+        return new DefaultKubernetesClient();
     }
 
     public synchronized static KubernetesClient getKubernetesClient() {

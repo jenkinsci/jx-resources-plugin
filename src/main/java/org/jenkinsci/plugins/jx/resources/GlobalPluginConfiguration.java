@@ -97,7 +97,7 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
                 protected void doRun() throws Exception {
                     logger.info("Waiting for Jenkins to be started");
                     while (true) {
-                        Computer[] computers = Jenkins.getActiveInstance().getComputers();
+                        Computer[] computers = Jenkins.getInstance().getComputers();
                         boolean ready = false;
                         for (Computer c : computers) {
                             // Jenkins.isAcceptingTasks() results in hudson.model.Node.isAcceptingTasks() getting called, and that always returns true;

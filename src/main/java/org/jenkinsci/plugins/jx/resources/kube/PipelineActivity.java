@@ -9,27 +9,27 @@ import io.fabric8.kubernetes.client.CustomResource;
 @JsonDeserialize(
         using = JsonDeserializer.None.class
 )
-public class PipelineActivities extends CustomResource {
-    private PipelineActivitiesSpec spec;
+public class PipelineActivity extends CustomResource {
+    private PipelineActivitySpec spec;
 
-    public PipelineActivities() {
-        setKind("PipelineActivities");
+    public PipelineActivity() {
+        setKind("PipelineActivity");
     }
 
     @Override
     public String toString() {
-        return "PipelineActivities{" +
+        return "PipelineActivity{" +
                 "apiVersion='" + getApiVersion() + '\'' +
                 ", metadata=" + getMetadata() +
                 ", spec=" + spec +
                 '}';
     }
 
-    public PipelineActivitiesSpec getSpec() {
+    public PipelineActivitySpec getSpec() {
         return spec;
     }
 
-    public void setSpec(PipelineActivitiesSpec spec) {
+    public void setSpec(PipelineActivitySpec spec) {
         this.spec = spec;
     }
 }

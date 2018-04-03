@@ -40,7 +40,7 @@ import java.util.Map;
         using = JsonDeserializer.None.class
 )
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class PipelineActivitiesSpec implements KubernetesResource {
+public class PipelineActivitySpec implements KubernetesResource {
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();

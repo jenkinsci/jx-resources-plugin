@@ -6,6 +6,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.triggers.SafeTimerTask;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
@@ -15,9 +16,9 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.jenkinsci.plugins.jx.resources.kube.ClientHelper;
 import org.jenkinsci.plugins.jx.resources.kube.DoneablePipelineActivities;
 import org.jenkinsci.plugins.jx.resources.kube.KubernetesNames;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivities;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitiesList;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitiesSpec;
+import org.jenkinsci.plugins.jx.resources.kube.PipelineActivity;
+import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityList;
+import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitySpec;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -179,20 +180,21 @@ public class BuildSyncRunListener extends RunListener<Run> {
 
         KubernetesClient kubeClent = getKubernetesClient();
         String namespace = GlobalPluginConfiguration.get().getNamespace();
-        NonNamespaceOperation<PipelineActivities, PipelineActivitiesList, DoneablePipelineActivities, Resource<PipelineActivities, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClent, namespace);
+        NonNamespaceOperation<PipelineActivity, PipelineActivityList, DoneablePipelineActivities, Resource<PipelineActivity, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClent, namespace);
 
         String runName = run.getParent().getFullName() + "-" + run.getNumber();
         String name = KubernetesNames.convertToKubernetesName(runName, false);
 
         boolean create = false;
-        PipelineActivities activity = client.withName(name).get();
+        PipelineActivity activity = client.withName(name).get();
         if (activity == null) {
-            activity = new PipelineActivities();
+            activity = new PipelineActivity();
+            activity.setMetadata(new ObjectMetaBuilder().withName(name).build());
             create = true;
         }
-        PipelineActivitiesSpec spec = activity.getSpec();
+        PipelineActivitySpec spec = activity.getSpec();
         if (spec == null) {
-            spec = new PipelineActivitiesSpec();
+            spec = new PipelineActivitySpec();
             activity.setSpec(spec);
         }
 
