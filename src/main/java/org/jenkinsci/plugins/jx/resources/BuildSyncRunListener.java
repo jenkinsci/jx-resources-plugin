@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.jx.resources;
 
 import com.cloudbees.workflow.rest.external.RunExt;
 import hudson.Extension;
+import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
@@ -19,6 +20,7 @@ import org.jenkinsci.plugins.jx.resources.kube.KubernetesNames;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivity;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityList;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitySpec;
+import org.jenkinsci.plugins.jx.resources.kube.Statuses;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -31,6 +33,7 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.formatTimestamp;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesClient;
 
@@ -197,10 +200,43 @@ public class BuildSyncRunListener extends RunListener<Run> {
             spec = new PipelineActivitySpec();
             activity.setSpec(spec);
         }
+        String status = getStatus(run);
+        spec.setStatus(status);
+        if (isBlank(spec.getStartedTimestamp())) {
+            spec.setStartedTimestamp(startTime);
+        }
+        if (isBlank(spec.getCompletedTimestamp()) && Statuses.isCompleted(status)) {
+            spec.setCompletedTimestamp(completionTime);
+        }
 
         client.createOrReplace(activity);
         logger.log(INFO, (create ? "Created" : "Updated") + "  pipeline activity " + name);
     }
+
+    private String getStatus(Run run) {
+        if (run != null && !run.hasntStartedYet()) {
+            if (run.isBuilding()) {
+                return Statuses.RUNNING;
+            } else {
+                Result result = run.getResult();
+                if (result != null) {
+                    if (result.equals(Result.SUCCESS)) {
+                        return Statuses.SUCCEEDED;
+                    } else if (result.equals(Result.ABORTED)) {
+                        return Statuses.ABORTED;
+                    } else if (result.equals(Result.FAILURE)) {
+                        return Statuses.FAILED;
+                    } else if (result.equals(Result.UNSTABLE)) {
+                        return Statuses.FAILED;
+                    } else {
+                        return Statuses.PENDING;
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
 
     private long getStartTime(Run run) {
         return run.getStartTimeInMillis();
