@@ -1,0 +1,2 @@
+FROM jenkinsxio/jenkinsx:0.0.9
+COPY target/jx-resources.hpi /usr/share/jenkins/ref/plugins/jx-resources.jpi
