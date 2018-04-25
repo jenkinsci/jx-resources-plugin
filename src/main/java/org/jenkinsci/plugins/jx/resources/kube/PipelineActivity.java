@@ -1,8 +1,14 @@
 package org.jenkinsci.plugins.jx.resources.kube;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.fabric8.kubernetes.client.CustomResource;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  */
@@ -11,6 +17,8 @@ import io.fabric8.kubernetes.client.CustomResource;
 )
 public class PipelineActivity extends CustomResource {
     private PipelineActivitySpec spec;
+    @JsonIgnore
+    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     public PipelineActivity() {
         setKind("PipelineActivity");
@@ -25,6 +33,21 @@ public class PipelineActivity extends CustomResource {
                 '}';
     }
 
+
+    @JsonAnyGetter
+    public Map<String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperty(String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
+    
     public PipelineActivitySpec getSpec() {
         return spec;
     }
