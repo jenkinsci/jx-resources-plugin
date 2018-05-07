@@ -1,16 +1,16 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-  <f:section title="JX Resources Plugin">
-    <f:entry title="Enabled" field="enabled"
-             description="Check if we should enable the Jenkins X Resources plugin">
+  <f:section title="${%JX Resources Plugin}">
+    <f:entry title="${%Enabled}" field="enabled"
+             description="${%enabled.desc}">
       <f:checkbox/>
     </f:entry>
-    <f:entry title="Server" field="server"
-             description="The API server to sync against - leave blank if running on a kubernetes cluster">
+    <f:entry title="${%Server}" field="server"
+             description="${%server.desc}">
       <f:textbox/>
     </f:entry>
-    <f:entry title="Namespace" field="namespace"
-             description="The namespace to create the PipelineActivity resources in.">
+    <f:entry title="${%Namespace}" field="namespace"
+             description="${%namespace.desc}">
       <f:textbox/>
     </f:entry>
   </f:section>
