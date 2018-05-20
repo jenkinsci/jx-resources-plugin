@@ -23,6 +23,7 @@ public class KubernetesUtils {
      * Initializes an {@link KubernetesClient}
      *
      * @param serverUrl the optional URL of where the OpenShift cluster API server is running
+     * @return  the kubernetes client
      */
     protected static KubernetesClient initializeKubernetesClient(String serverUrl) {
         if (serverUrl != null && !serverUrl.isEmpty()) {

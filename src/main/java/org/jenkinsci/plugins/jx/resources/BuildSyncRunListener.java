@@ -9,7 +9,9 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.triggers.SafeTimerTask;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
@@ -31,6 +33,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -52,12 +55,15 @@ import static org.jenkinsci.plugins.jx.resources.MarkupUtils.toYaml;
 public class BuildSyncRunListener extends RunListener<Run> {
     private static final Logger logger = Logger.getLogger(BuildSyncRunListener.class.getName());
 
+    protected static final String[] exposeUrlAnnotations = {"jenkins-x.io/exposeUrl", "fabric8.io/exposeUrl"};
+
     private long pollPeriodMs = 1000;
     private String namespace;
 
     private transient Set<Run> runsToPoll = new CopyOnWriteArraySet<>();
 
     private transient AtomicBoolean timerStarted = new AtomicBoolean(false);
+    private String jenkinsURL;
 
     public BuildSyncRunListener() {
     }
@@ -218,9 +224,21 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (isBlank(spec.getPipeline())) {
             spec.setPipeline(parentFullName);
         }
+        String buildNumberText = "" + run.getNumber();
         if (isBlank(spec.getBuild())) {
-            spec.setBuild("" + run.getNumber());
+            spec.setBuild(buildNumberText);
         }
+
+        String jenkinsURL = jenkinsURL(kubeClent, namespace);
+        if (!isBlank(jenkinsURL)) {
+            if (isBlank(spec.getBuildUrl())) {
+                spec.setBuildUrl(createBuildUrl(jenkinsURL, parentFullName, buildNumberText));
+            }
+            if (isBlank(spec.getBuildLogsUrl())) {
+                spec.setBuildLogsUrl(createBuildLogsUrl(jenkinsURL, parentFullName, buildNumberText));
+            }
+        }
+
 
         List<StageNodeExt> stages = wfRunExt.getStages();
         if (stages != null) {
@@ -230,7 +248,8 @@ public class BuildSyncRunListener extends RunListener<Run> {
                 StageActivityStep stageStep = getOrCreateStage(spec, i++);
                 if (stageStep != null) {
                     stageStep.setStatus(stageStatus);
-                    stageStep.setName(stage.getName());
+                    String stageName = getStageName(stage);
+                    stageStep.setName(stageName);
                     if (isBlank(stageStep.getStartedTimestamp())) {
                         stageStep.setStartedTimestamp(formatTimestamp(stage.getStartTimeMillis()));
                     }
@@ -246,6 +265,66 @@ public class BuildSyncRunListener extends RunListener<Run> {
             client.createOrReplace(activity);
             logger.log(INFO, (create ? "Created" : "Updated") + "  pipeline activity " + name);
         }
+    }
+
+    public static String createBuildLogsUrl(String jenkinsURL, String pipeline, String buildNumberText) {
+        String[] paths  = pipeline.split("/");
+        String path = "/job/" + String.join("/job/", paths);
+        return URLHelpers.pathJoin(jenkinsURL, path, buildNumberText, "/console");
+    }
+
+    public static String createBuildUrl(String jenkinsURL, String pipeline, String buildNumberText) {
+
+        String path = pipeline;
+        int idx = path.indexOf('/');
+        if (idx > 0) {
+            path = path.substring(0 , idx) + "%2F" + path.substring(idx + 1);
+        }
+        idx = path.indexOf('/');
+        if (idx > 0) {
+            path = path.substring(0 , idx) + "/detail/" + path.substring(idx + 1);
+        }
+        return URLHelpers.pathJoin(jenkinsURL, "/blue/organizations/jenkins/", path, buildNumberText, "/pipeline");
+    }
+
+    protected String jenkinsURL(KubernetesClient kubeClient, String namespace) {
+        if (this.jenkinsURL == null) {
+            try {
+                Service service = kubeClient.services().inNamespace(namespace).withName("jenkins").get();
+                if (service != null) {
+                    ObjectMeta metadata = service.getMetadata();
+                    if (metadata != null) {
+                        Map<String, String> annotations = metadata.getAnnotations();
+                        if (annotations != null) {
+                            for (String exposeUrlAnnotation : exposeUrlAnnotations) {
+                                this.jenkinsURL = annotations.get(exposeUrlAnnotation);
+                                if (this.jenkinsURL != null) {
+                                    return this.jenkinsURL;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.log(WARNING, "Could not find Jenkins service in namespace " + namespace + ": " + e, e);
+            }
+        }
+        return this.jenkinsURL;
+    }
+
+    protected String getStageName(StageNodeExt stage) {
+        String name = stage.getName();
+        if ("Declarative: Checkout SCM".equals(name)) {
+            return "Checkout Source";
+        }
+        if ("Declarative: Post Actions".equals(name)) {
+            return "Clean up";
+        }
+        String prefix = "Declarative: ";
+        if (name.startsWith(prefix)) {
+            return name.substring(prefix.length());
+        }
+        return name;
     }
 
     protected String toYamlOrRandom(Object data) {
