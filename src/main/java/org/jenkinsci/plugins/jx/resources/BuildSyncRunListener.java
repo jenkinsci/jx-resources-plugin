@@ -8,6 +8,9 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
+import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.UserRemoteConfig;
+import hudson.scm.SCM;
 import hudson.triggers.SafeTimerTask;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
@@ -27,11 +30,15 @@ import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitySpec;
 import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityStep;
 import org.jenkinsci.plugins.jx.resources.kube.StageActivityStep;
 import org.jenkinsci.plugins.jx.resources.kube.Statuses;
+import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
+import org.jenkinsci.plugins.workflow.flow.FlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,10 +60,8 @@ import static org.jenkinsci.plugins.jx.resources.MarkupUtils.toYaml;
  */
 @Extension
 public class BuildSyncRunListener extends RunListener<Run> {
-    private static final Logger logger = Logger.getLogger(BuildSyncRunListener.class.getName());
-
     protected static final String[] exposeUrlAnnotations = {"jenkins-x.io/exposeUrl", "fabric8.io/exposeUrl"};
-
+    private static final Logger logger = Logger.getLogger(BuildSyncRunListener.class.getName());
     private long pollPeriodMs = 1000;
     private String namespace;
 
@@ -96,6 +101,26 @@ public class BuildSyncRunListener extends RunListener<Run> {
                 .replaceAll("/\\?", "?")
                 .replaceAll("/#", "#")
                 .replaceAll(":/", "://");
+    }
+
+    public static String createBuildLogsUrl(String jenkinsURL, String pipeline, String buildNumberText) {
+        String[] paths = pipeline.split("/");
+        String path = "/job/" + String.join("/job/", paths);
+        return URLHelpers.pathJoin(jenkinsURL, path, buildNumberText, "/console");
+    }
+
+    public static String createBuildUrl(String jenkinsURL, String pipeline, String buildNumberText) {
+
+        String path = pipeline;
+        int idx = path.indexOf('/');
+        if (idx > 0) {
+            path = path.substring(0, idx) + "%2F" + path.substring(idx + 1);
+        }
+        idx = path.indexOf('/');
+        if (idx > 0) {
+            path = path.substring(0, idx) + "/detail/" + path.substring(idx + 1);
+        }
+        return URLHelpers.pathJoin(jenkinsURL, "/blue/organizations/jenkins/", path, buildNumberText, "/pipeline");
     }
 
     @Override
@@ -239,6 +264,12 @@ public class BuildSyncRunListener extends RunListener<Run> {
             }
         }
 
+        if (isBlank(spec.getGitUrl())) {
+            String gitUrl = findGitURL(run);
+            if (!isBlank(gitUrl)) {
+                spec.setGitUrl(gitUrl);
+            }
+        }
 
         List<StageNodeExt> stages = wfRunExt.getStages();
         if (stages != null) {
@@ -267,24 +298,50 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
     }
 
-    public static String createBuildLogsUrl(String jenkinsURL, String pipeline, String buildNumberText) {
-        String[] paths  = pipeline.split("/");
-        String path = "/job/" + String.join("/job/", paths);
-        return URLHelpers.pathJoin(jenkinsURL, path, buildNumberText, "/console");
+    private String findGitURL(Run run) {
+        if (run instanceof WorkflowRun) {
+            WorkflowRun workflowRun = (WorkflowRun) run;
+            WorkflowJob job = workflowRun.getParent();
+            if (job != null) {
+                FlowDefinition definition = job.getDefinition();
+                if (definition instanceof CpsScmFlowDefinition) {
+                    CpsScmFlowDefinition cpsScmFlowDefinition = (CpsScmFlowDefinition) definition;
+                    SCM scm = cpsScmFlowDefinition.getScm();
+                    String url = getGitUrl(scm);
+                    if (!isBlank(url)) {
+                        return url;
+                    }
+                }
+                Collection<? extends SCM> scms = job.getSCMs();
+                if (scms != null) {
+                    for (SCM scm : scms) {
+                        String url = getGitUrl(scm);
+                        if (!isBlank(url)) {
+                            return url;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
-    public static String createBuildUrl(String jenkinsURL, String pipeline, String buildNumberText) {
-
-        String path = pipeline;
-        int idx = path.indexOf('/');
-        if (idx > 0) {
-            path = path.substring(0 , idx) + "%2F" + path.substring(idx + 1);
+    private String getGitUrl(SCM scm) {
+        if (scm instanceof GitSCM) {
+            GitSCM gitSCM = (GitSCM) scm;
+            List<UserRemoteConfig> userRemoteConfigs = gitSCM.getUserRemoteConfigs();
+            if (userRemoteConfigs != null) {
+                for (UserRemoteConfig userRemoteConfig : userRemoteConfigs) {
+                    if (userRemoteConfig != null) {
+                        String url = userRemoteConfig.getUrl();
+                        if (!isBlank(url)) {
+                            return url;
+                        }
+                    }
+                }
+            }
         }
-        idx = path.indexOf('/');
-        if (idx > 0) {
-            path = path.substring(0 , idx) + "/detail/" + path.substring(idx + 1);
-        }
-        return URLHelpers.pathJoin(jenkinsURL, "/blue/organizations/jenkins/", path, buildNumberText, "/pipeline");
+        return null;
     }
 
     protected String jenkinsURL(KubernetesClient kubeClient, String namespace) {
