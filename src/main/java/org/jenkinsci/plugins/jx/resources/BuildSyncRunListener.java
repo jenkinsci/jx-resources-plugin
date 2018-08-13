@@ -19,17 +19,18 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
+import io.jenkins.x.client.util.URLHelpers;
 import jenkins.util.Timer;
 import org.apache.commons.httpclient.HttpStatus;
-import org.jenkinsci.plugins.jx.resources.kube.ClientHelper;
-import org.jenkinsci.plugins.jx.resources.kube.DoneablePipelineActivities;
-import org.jenkinsci.plugins.jx.resources.kube.KubernetesNames;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivity;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityList;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivitySpec;
-import org.jenkinsci.plugins.jx.resources.kube.PipelineActivityStep;
-import org.jenkinsci.plugins.jx.resources.kube.StageActivityStep;
-import org.jenkinsci.plugins.jx.resources.kube.Statuses;
+import io.jenkins.x.client.kube.ClientHelper;
+import io.jenkins.x.client.kube.DoneablePipelineActivities;
+import io.jenkins.x.client.kube.KubernetesNames;
+import io.jenkins.x.client.kube.PipelineActivity;
+import io.jenkins.x.client.kube.PipelineActivityList;
+import io.jenkins.x.client.kube.PipelineActivitySpec;
+import io.jenkins.x.client.kube.PipelineActivityStep;
+import io.jenkins.x.client.kube.StageActivityStep;
+import io.jenkins.x.client.kube.Statuses;
 import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -53,7 +54,7 @@ import static java.util.logging.Level.WARNING;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.formatTimestamp;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesClient;
-import static org.jenkinsci.plugins.jx.resources.MarkupUtils.toYaml;
+import static io.jenkins.x.client.util.MarkupUtils.toYaml;
 
 /**
  * Listens to Jenkins Job build {@link Run} and updates the PipelineActivity resource
