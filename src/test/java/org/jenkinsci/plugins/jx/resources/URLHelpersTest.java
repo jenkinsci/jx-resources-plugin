@@ -16,6 +16,7 @@
  */
 package org.jenkinsci.plugins.jx.resources;
 
+import io.jenkins.x.client.util.URLHelpers;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
