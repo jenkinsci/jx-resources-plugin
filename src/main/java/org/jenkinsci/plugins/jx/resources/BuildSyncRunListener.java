@@ -280,6 +280,13 @@ public class BuildSyncRunListener extends RunListener<Run> {
                 StageActivityStep stageStep = getOrCreateStage(spec, i++);
                 if (stageStep != null) {
                     stageStep.setStatus(stageStatus);
+                    if (status.equals(Statuses.SUCCEEDED)) {
+                        switch (stageStatus) {
+                            case Statuses.RUNNING:
+                            case Statuses.PENDING:
+                                spec.setStatus(Statuses.RUNNING);
+                        }
+                    }
                     String stageName = getStageName(stage);
                     stageStep.setName(stageName);
                     if (isBlank(stageStep.getStartedTimestamp())) {
