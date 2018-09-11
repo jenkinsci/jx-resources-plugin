@@ -19,9 +19,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
-import io.jenkins.x.client.util.URLHelpers;
-import jenkins.util.Timer;
-import org.apache.commons.httpclient.HttpStatus;
 import io.jenkins.x.client.kube.ClientHelper;
 import io.jenkins.x.client.kube.DoneablePipelineActivities;
 import io.jenkins.x.client.kube.KubernetesNames;
@@ -31,6 +28,10 @@ import io.jenkins.x.client.kube.PipelineActivitySpec;
 import io.jenkins.x.client.kube.PipelineActivityStep;
 import io.jenkins.x.client.kube.StageActivityStep;
 import io.jenkins.x.client.kube.Statuses;
+import io.jenkins.x.client.util.Strings;
+import io.jenkins.x.client.util.URLHelpers;
+import jenkins.util.Timer;
+import org.apache.commons.httpclient.HttpStatus;
 import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -49,12 +50,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
+import static io.jenkins.x.client.util.MarkupUtils.toYaml;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.formatTimestamp;
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesClient;
-import static io.jenkins.x.client.util.MarkupUtils.toYaml;
 
 /**
  * Listens to Jenkins Job build {@link Run} and updates the PipelineActivity resource
@@ -222,8 +223,31 @@ public class BuildSyncRunListener extends RunListener<Run> {
         String namespace = GlobalPluginConfiguration.get().getNamespace();
         NonNamespaceOperation<PipelineActivity, PipelineActivityList, DoneablePipelineActivities, Resource<PipelineActivity, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClent, namespace);
 
-        String parentFullName = run.getParent().getFullName();
-        String runName = parentFullName + "-" + run.getNumber();
+        String parentFullName = "";
+
+        // when using this plugin inside the jenkinsfile runner these values may not be valid so lets look for the magic env vars first
+        String repoOwner = System.getenv("REPO_OWNER");
+        String repoName = System.getenv("REPO_NAME");
+        String branchName = System.getenv("BRANCH_NAME");
+        if (Strings.notEmpty(repoOwner) && Strings.notEmpty(repoName) && Strings.notEmpty(branchName)) {
+            parentFullName = repoOwner + "/" + repoName + "/" + branchName;
+        }
+
+        String buildNumberText = System.getenv("JX_BUILD_NUMBER");
+        if (Strings.empty(buildNumberText)) {
+            buildNumberText = System.getenv("BUILD_NUMBER");
+        }
+        if (Strings.empty(buildNumberText)) {
+            buildNumberText = System.getenv("BUILD_ID");
+        }
+
+        if (Strings.empty(parentFullName)) {
+            parentFullName = run.getParent().getFullName();
+        }
+        if (Strings.empty(buildNumberText)) {
+            buildNumberText = "" + run.getNumber();
+        }
+        String runName = parentFullName + "-" + buildNumberText;
         String name = KubernetesNames.convertToKubernetesName(runName, false);
 
         boolean create = false;
@@ -250,7 +274,6 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (isBlank(spec.getPipeline())) {
             spec.setPipeline(parentFullName);
         }
-        String buildNumberText = "" + run.getNumber();
         if (isBlank(spec.getBuild())) {
             spec.setBuild(buildNumberText);
         }
