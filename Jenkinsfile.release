@@ -1,9 +1,6 @@
 pipeline {
-  agent {
-    label "jenkins-maven"
-  }
+  agent any
   environment {
-    GIT_CREDS = credentials('jenkins-x-git')
     GIT_USERNAME = "$GIT_CREDS_USR"
     GIT_API_TOKEN = "$GIT_CREDS_PSW"
   }
@@ -13,9 +10,7 @@ pipeline {
         branch 'PR-*'
       }
       steps {
-        container('maven') {
-          sh "mvn install"
-        }
+        sh "mvn install"
       }
     }
     stage('Build Release') {
@@ -23,30 +18,20 @@ pipeline {
         branch 'master'
       }
       steps {
-        container('maven') {
-          // ensure we're not on a detached head
-          sh "git checkout master"
-          // until we switch to the new kubernetes / jenkins credential implementation use git credentials store
-          sh "git config --global credential.helper store"
-          sh "jx step git credentials"
+        // ensure we're not on a detached head
+        sh "git checkout master"
 
-          // so we can retrieve the version in later steps
-          sh "echo \$(jx-release-version) > VERSION"
-          sh "mvn versions:set -DnewVersion=\$(cat VERSION)"
+        // so we can retrieve the version in later steps
+        sh "echo \$(jx-release-version) > VERSION"
+        sh "mvn versions:set -DnewVersion=\$(cat VERSION)"
 
-          sh "git tag -fa v\$(cat VERSION) -m \"Release version \$(cat VERSION)\""
-          sh "git push origin v\$(cat VERSION)"
-        }
+        sh "git tag -fa v\$(cat VERSION) -m \"Release version \$(cat VERSION)\""
+        sh "git push origin v\$(cat VERSION)"
 
         container('maven') {
           sh 'mvn clean deploy -DaltDeploymentRepository=maven.jenkins-ci.org::default::https://repo.jenkins-ci.org/releases/ -P release'
         }
       }
-    }
-  }
-  post {
-    always {
-      cleanWs()
     }
   }
 }
