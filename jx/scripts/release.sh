@@ -9,7 +9,7 @@ mvn versions:set -DnewVersion=$(cat VERSION)
 git tag -fa v$(cat VERSION) -m "Release version $(cat VERSION)"
 git push origin v$(cat VERSION)
 
-mvn clean deploy -DaltDeploymentRepository=maven.jenkins-ci.org::default::https://repo.jenkins-ci.org/releases/ -P release
+mvn clean deploy -DaltDeploymentRepository=>oss-sonatype-staging::default::https://repo.jenkins-ci.org/releases/ -P release
 
 # TODO
 #updatebot push-version --kind maven ${VERSION}
