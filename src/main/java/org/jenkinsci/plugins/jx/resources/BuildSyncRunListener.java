@@ -329,6 +329,16 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
     }
 
+    /**
+     * Returns true if the plugin is running inside Servlerless Jenkins where we don't have a static master
+     * serving up a UI
+     *
+     * @return true if inside a UI-less servleress jenkins
+     */
+    private boolean isServerlessJenkins() {
+        return Strings.notEmpty(System.getenv("PROW_JOB_ID"));
+    }
+
     private String findGitURL(Run run) {
         if (run instanceof WorkflowRun) {
             WorkflowRun workflowRun = (WorkflowRun) run;
@@ -376,6 +386,9 @@ public class BuildSyncRunListener extends RunListener<Run> {
     }
 
     protected String jenkinsURL(KubernetesClient kubeClient, String namespace) {
+        if (isServerlessJenkins()) {
+            return "";
+        }
         if (this.jenkinsURL == null) {
             try {
                 Service service = kubeClient.services().inNamespace(namespace).withName("jenkins").get();
