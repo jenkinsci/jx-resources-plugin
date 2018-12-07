@@ -2,7 +2,7 @@
 set -e
 
 echo $(jx-release-version) > VERSION
-echo "Releasing jx-resources-plugin version $(cat VERSION)"
+echo "Releasing jx-resources-plugin: version $(cat VERSION)"
 
 mvn versions:set -DnewVersion=$(cat VERSION)
     
