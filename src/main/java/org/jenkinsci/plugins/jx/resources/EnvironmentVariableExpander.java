@@ -29,19 +29,25 @@ public class EnvironmentVariableExpander {
     }
 
     static String expandIfNecessary(String input, Map<String, String> substitutions) {
-        // Is the value a $VALUE - if so, we need to expand that too
-        String pattern = "\\$([A-Z_]+)"; // Note, this will not do any escaping (eg, $$FOO will get resolved as $BAR rather than leaving it unresolved)
-        Pattern expr = Pattern.compile(pattern);
-        Matcher matcher = expr.matcher(input);
-        while (matcher.find()) {
-            String envValue = substitutions.get(matcher.group(1).toUpperCase());
-            if (envValue != null) {
-                envValue = envValue.replace("\\", "\\\\");
-                Pattern subexpr = Pattern.compile(Pattern.quote(matcher.group(0)));
-                input = subexpr.matcher(input).replaceAll(envValue);
+        try {
+            // Is the value a $VALUE - if so, we need to expand that too
+            String pattern =
+                    "\\$([A-Z_]+)"; // Note, this will not do any escaping (eg, $$FOO will get resolved as $BAR rather than leaving it unresolved)
+            Pattern expr = Pattern.compile(pattern);
+            Matcher matcher = expr.matcher(input);
+            while (matcher.find()) {
+                String envValue = substitutions.get(matcher.group(1).toUpperCase());
+                if (envValue != null) {
+                    envValue = envValue.replace("\\", "\\\\");
+                    Pattern subexpr = Pattern.compile(Pattern.quote(matcher.group(0)));
+                    input = subexpr.matcher(input).replaceAll(envValue);
+                }
             }
-        }
 
-        return input;
+            return input;
+        } catch (Throwable t) {
+            // Just in case anything went wrong, return the original string
+            return input;
+        }
     }
 }
