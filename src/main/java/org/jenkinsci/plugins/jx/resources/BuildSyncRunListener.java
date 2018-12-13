@@ -49,6 +49,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static io.jenkins.x.client.util.MarkupUtils.toYaml;
 import static java.util.logging.Level.INFO;
@@ -123,6 +125,24 @@ public class BuildSyncRunListener extends RunListener<Run> {
             path = path.substring(0, idx) + "/detail/" + path.substring(idx + 1);
         }
         return URLHelpers.pathJoin(jenkinsURL, "/blue/organizations/jenkins/", path, buildNumberText, "/pipeline");
+    }
+    
+    public static String expandVars(String input, Map<String,String> envMap) {
+    	String pattern = "\\$([A-Z_]+)";
+    	Pattern expr = Pattern.compile(pattern);
+    	Matcher matcher = expr.matcher(input);
+    	while (matcher.find()) {
+    	    String envValue = envMap.get(matcher.group(1).toUpperCase());
+    	    if (envValue == null) {
+    	        envValue = "";
+    	    } else {
+    	        envValue = envValue.replace("\\", "\\\\");
+    	    }
+    	    Pattern subexpr = Pattern.compile(Pattern.quote(matcher.group(0)));
+    	    input = subexpr.matcher(input).replaceAll(envValue);
+    	}
+    	
+    	return input;
     }
 
     @Override
@@ -239,7 +259,11 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
         if (Strings.empty(buildNumberText)) {
             buildNumberText = System.getenv("BUILD_ID");
-        }
+        } 
+        
+        if (buildNumberText.contains("$")) {
+            buildNumberText = expandVars(buildNumberText, System.getenv());
+		}
 
         if (Strings.empty(parentFullName)) {
             parentFullName = run.getParent().getFullName();
