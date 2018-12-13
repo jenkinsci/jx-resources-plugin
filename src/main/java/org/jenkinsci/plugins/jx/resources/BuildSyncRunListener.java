@@ -263,7 +263,7 @@ public class BuildSyncRunListener extends RunListener<Run> {
         
         if (buildNumberText.contains("$")) {
             buildNumberText = expandVars(buildNumberText, System.getenv());
-		}
+        }
 
         if (Strings.empty(parentFullName)) {
             parentFullName = run.getParent().getFullName();
