@@ -11,7 +11,7 @@ mvn versions:set -DnewVersion=$(cat VERSION)
 
 echo "Pushing new release tag"
 
-jx step tag --version \$(cat VERSION)
+jx step tag --version $(cat VERSION)
 
 echo "Now deploying release"
 
