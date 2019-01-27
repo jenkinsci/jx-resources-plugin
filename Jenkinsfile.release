@@ -6,6 +6,9 @@ pipeline {
     GIT_CREDS = credentials('jenkins-x-git')
     GIT_USERNAME = "$GIT_CREDS_USR"
     GIT_API_TOKEN = "$GIT_CREDS_PSW"
+
+    // disable the downloading progress indicator
+    MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
   }
   stages {
     stage('CI Build and push snapshot') {
@@ -30,14 +33,17 @@ pipeline {
           sh "git config --global credential.helper store"
           sh "jx step git credentials"
 
+          
           // so we can retrieve the version in later steps
           sh "echo \$(jx-release-version) > VERSION"
           sh "mvn versions:set -DnewVersion=\$(cat VERSION)"
 
-          sh "jx step tag --version \$(cat VERSION)"
-        }
+          sh "echo now pushing the new tag"
 
-        container('maven') {
+          sh "jx step tag --version \$(cat VERSION)"
+
+          sh "echo deploying the new version"
+
           sh 'mvn clean deploy -DaltDeploymentRepository=maven.jenkins-ci.org::default::https://repo.jenkins-ci.org/releases/ -P release'
         }
       }
