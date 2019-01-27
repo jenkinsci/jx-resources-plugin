@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>jx-resources</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.33</version>
   <packaging>hpi</packaging>
   <name>JX Resources Plugin</name>
   <description>A plugin which uses Kubernetes Resources for storage of pipeline state</description>
