@@ -13,5 +13,6 @@
              description="${%namespace.desc}">
       <f:textbox/>
     </f:entry>
+    <f:validateButton method="validateClient" with="server,namespace" title="${%Test connection}" progress="${%Checking…}"/>
   </f:section>
 </j:jelly>
