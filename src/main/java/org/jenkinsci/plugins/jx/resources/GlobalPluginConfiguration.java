@@ -10,7 +10,6 @@ import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.util.Timer;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.concurrent.TimeUnit;
@@ -31,21 +30,14 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
 
     private String namespace;
 
-    @DataBoundConstructor
-    public GlobalPluginConfiguration(boolean enable, String server, String namespace) {
-        this.enabled = enable;
-        this.server = server;
-        this.namespace = namespace;
-        configChange();
-    }
-
     public GlobalPluginConfiguration() {
         load();
         configChange();
-        save();
+        save(); // TODO why?
     }
 
     public static GlobalPluginConfiguration get() {
+        // TODO 2.87+ ExtensionList.lookupSingleton
         return GlobalConfiguration.all().get(GlobalPluginConfiguration.class);
     }
 
@@ -56,6 +48,7 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
 
     @Override
     public boolean configure(StaplerRequest req, JSONObject json) throws hudson.model.Descriptor.FormException {
+        // TODO JCasC: delete override, move configChange() + save() into setters
         req.bindJSON(this, json);
         configChange();
         save();
