@@ -3,7 +3,9 @@ package org.jenkinsci.plugins.jx.resources;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.triggers.SafeTimerTask;
+import hudson.util.FormValidation;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.jenkins.x.client.kube.ClientHelper;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.util.Timer;
@@ -16,6 +18,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getNamespaceOrUseDefault;
+import org.kohsuke.stapler.QueryParameter;
 
 @Extension
 public class GlobalPluginConfiguration extends GlobalConfiguration {
@@ -86,7 +89,7 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
     private void configChange() {
         try {
             if (!enabled) {
-                KubernetesUtils.shutdownKubernetesClient();
+                KubernetesUtils.shutdownKubernetesClient(); // TODO this perhaps needs to run unconditionally
                 return;
             }
             KubernetesClient kubeClient = KubernetesUtils.getKubernetesClient(server, this);
@@ -116,6 +119,7 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
                             // ignore
                         }
                     }
+                    // TODO and then what happens?
                 }
             };
             // lets give jenkins a while to get started ;)
@@ -126,6 +130,18 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
             } else {
                 logger.log(Level.SEVERE, "Failed to configure OpenShift Jenkins Sync Plugin: " + e);
             }
+        }
+    }
+
+    public FormValidation doValidateClient(@QueryParameter String server, @QueryParameter String namespace) {
+        try {
+            KubernetesUtils.shutdownKubernetesClient();
+            KubernetesClient kubeClient = KubernetesUtils.getKubernetesClient(server, this);
+            String ns = getNamespaceOrUseDefault(namespace, kubeClient);
+            int size = ClientHelper.pipelineActivityClient(kubeClient, ns).list().getItems().size();
+            return FormValidation.ok("Found (at least) " + size + " existing build records in namespace " + ns);
+        } catch (Exception x) {
+            return FormValidation.error(x, "Could not check server connection");
         }
     }
 
