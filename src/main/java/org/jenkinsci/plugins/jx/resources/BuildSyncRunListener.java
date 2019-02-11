@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.jx.resources;
 import com.cloudbees.workflow.rest.external.RunExt;
 import com.cloudbees.workflow.rest.external.StageNodeExt;
 import com.cloudbees.workflow.rest.external.StatusExt;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -61,7 +62,7 @@ import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesCl
  */
 @Extension
 public class BuildSyncRunListener extends RunListener<Run> {
-    protected static final String[] exposeUrlAnnotations = {"jenkins-x.io/exposeUrl", "fabric8.io/exposeUrl"};
+    private static final String[] exposeUrlAnnotations = {"jenkins-x.io/exposeUrl", "fabric8.io/exposeUrl"};
     private static final Logger logger = Logger.getLogger(BuildSyncRunListener.class.getName());
     private final long pollPeriodMs = 1000;
 
@@ -192,6 +193,7 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
     }
 
+    @SuppressFBWarnings(value = "SF_SWITCH_NO_DEFAULT", justification = "Just ignoring other Statuses")
     private void upsertBuild(Run run, RunExt wfRunExt) {
         if (run == null) {
             return;

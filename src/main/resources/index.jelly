@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    A plugin which uses Kubernetes Resources for storage of pipeline state.
+</div>
