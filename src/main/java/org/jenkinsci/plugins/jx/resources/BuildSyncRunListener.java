@@ -412,7 +412,10 @@ public class BuildSyncRunListener extends RunListener<Run> {
             } catch (Exception e) {
                 logger.log(WARNING, "Could not find Jenkins service in namespace " + namespace + ": " + e, e);
             }
-            jenkinsURL = JenkinsLocationConfiguration.get().getUrl();
+            JenkinsLocationConfiguration jlc = JenkinsLocationConfiguration.get();
+            if (jlc != null) { // TODO bogus null check, fixed as of Jenkins 2.119
+                jenkinsURL = jlc.getUrl();
+            }
         }
         return this.jenkinsURL;
     }
