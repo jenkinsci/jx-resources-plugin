@@ -38,7 +38,6 @@ import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
 import org.jenkinsci.plugins.workflow.flow.FlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.kohsuke.stapler.DataBoundConstructor;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -66,21 +65,12 @@ import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getKubernetesCl
 public class BuildSyncRunListener extends RunListener<Run> {
     private static final String[] exposeUrlAnnotations = {"jenkins-x.io/exposeUrl", "fabric8.io/exposeUrl"};
     private static final Logger logger = Logger.getLogger(BuildSyncRunListener.class.getName());
-    private long pollPeriodMs = 1000;
-    private String namespace;
+    private final long pollPeriodMs = 1000;
 
-    private transient Set<Run> runsToPoll = new CopyOnWriteArraySet<>();
+    private final Set<Run> runsToPoll = new CopyOnWriteArraySet<>();
 
-    private transient AtomicBoolean timerStarted = new AtomicBoolean(false);
+    private final AtomicBoolean timerStarted = new AtomicBoolean(false);
     private String jenkinsURL;
-
-    public BuildSyncRunListener() {
-    }
-
-    @DataBoundConstructor
-    public BuildSyncRunListener(long pollPeriodMs) {
-        this.pollPeriodMs = pollPeriodMs;
-    }
 
     /**
      * Joins all the given strings, ignoring nulls so that they form a URL with / between the paths without a // if the
