@@ -31,6 +31,7 @@ import io.jenkins.x.client.kube.StageActivityStep;
 import io.jenkins.x.client.kube.Statuses;
 import io.jenkins.x.client.util.Strings;
 import io.jenkins.x.client.util.URLHelpers;
+import jenkins.model.JenkinsLocationConfiguration;
 import jenkins.util.Timer;
 import org.apache.commons.httpclient.HttpStatus;
 import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition;
@@ -410,6 +411,10 @@ public class BuildSyncRunListener extends RunListener<Run> {
                 }
             } catch (Exception e) {
                 logger.log(WARNING, "Could not find Jenkins service in namespace " + namespace + ": " + e, e);
+            }
+            JenkinsLocationConfiguration jlc = JenkinsLocationConfiguration.get();
+            if (jlc != null) { // TODO bogus null check, fixed as of Jenkins 2.119
+                jenkinsURL = jlc.getUrl();
             }
         }
         return this.jenkinsURL;
