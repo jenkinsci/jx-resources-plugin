@@ -75,6 +75,14 @@
       <artifactId>workflow-cps</artifactId>
       <version>2.41</version>
     </dependency>
+
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.9.9</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
   <dependencyManagement>
     <dependencies>

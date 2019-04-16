@@ -30,6 +30,9 @@ target
 .idea
 *.iml
 
+# VS Code
+.vscode
+
 work
 
 .updatebot-repos

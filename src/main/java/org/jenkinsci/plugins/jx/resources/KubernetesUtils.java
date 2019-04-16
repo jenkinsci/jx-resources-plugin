@@ -5,10 +5,19 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.lang.StringUtils;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
+import static java.time.temporal.ChronoField.HOUR_OF_DAY;
+import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
+import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.logging.Logger;
 
 /**
@@ -16,7 +25,17 @@ import java.util.logging.Logger;
 public class KubernetesUtils {
 
     private final static Logger logger = Logger.getLogger(KubernetesUtils.class.getName());
-    private static final DateTimeFormatter dateFormatter = ISODateTimeFormat.dateTimeNoMillis();
+    private static final DateTimeFormatter dateFormatter = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .append(ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .appendValue(HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            .optionalStart()
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2)
+            .appendOffsetId().toFormatter();
     private static KubernetesClient kubernetesClient;
 
     /**
@@ -100,7 +119,9 @@ public class KubernetesUtils {
     }
 
     public static String formatTimestamp(long timestamp) {
-        return dateFormatter.print(new DateTime(timestamp));
+        return ZonedDateTime.ofInstant(
+            Instant.ofEpochMilli(timestamp), ZoneId.systemDefault())
+            .format(dateFormatter);
     }
 
 }
