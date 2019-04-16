@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
     <version>3.37</version>
-    <relativePath/>
+    <relativePath />
   </parent>
 
   <artifactId>jx-resources</artifactId>
-  <version>1.0.36-SNAPSHOT</version>
+  <version>1.0.36</version>
   <packaging>hpi</packaging>
   <name>JX Resources Plugin</name>
   <description>A plugin which uses Kubernetes Resources for storage of pipeline state</description>
@@ -117,6 +116,7 @@
     <connection>scm:git:git://github.com/jenkinsci/jx-resources-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/jx-resources-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/jx-resources-plugin</url>
+    <tag>jx-resources-1.0.36</tag>
   </scm>
 
   <repositories>
