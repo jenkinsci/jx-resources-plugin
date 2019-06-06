@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 
 import static org.jenkinsci.plugins.jx.resources.KubernetesUtils.getNamespaceOrUseDefault;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 @Extension
 public class GlobalPluginConfiguration extends GlobalConfiguration {
@@ -126,7 +127,9 @@ public class GlobalPluginConfiguration extends GlobalConfiguration {
         }
     }
 
+    @RequirePOST
     public FormValidation doValidateClient(@QueryParameter String server, @QueryParameter String namespace) {
+        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         try {
             KubernetesUtils.shutdownKubernetesClient();
             KubernetesClient kubeClient = KubernetesUtils.getKubernetesClient(server, this);
