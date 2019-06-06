@@ -9,14 +9,14 @@
   </parent>
 
   <artifactId>jx-resources</artifactId>
-  <version>1.0.37</version>
+  <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
   <name>JX Resources Plugin</name>
   <description>A plugin which uses Kubernetes Resources for storage of pipeline state</description>
   <url>https://wiki.jenkins.io/display/JENKINS/JX+Resources+Plugin</url>
 
   <properties>
-    <revision>1.0.37</revision>
+    <revision>1.0.38</revision>
     <changelist>-SNAPSHOT</changelist>
     <jenkins.version>2.73.3</jenkins.version>
     <java.level>8</java.level>
@@ -118,7 +118,7 @@
     <connection>scm:git:git://github.com/jenkinsci/jx-resources-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/jx-resources-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/jx-resources-plugin</url>
-    <tag>jx-resources-1.0.37</tag>
+    <tag>${scmTag}</tag>
   </scm>
 
   <repositories>
