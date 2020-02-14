@@ -16,9 +16,12 @@
  */
 package io.jenkins.x.client.kube;
 
+import java.io.Serializable;
+
 /**
+ *
  */
-public class GitStatus extends DtoSupport {
+public class GitStatus extends DtoSupport implements Serializable {
     private String url;
     private String status;
 

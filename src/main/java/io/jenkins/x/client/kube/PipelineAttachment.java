@@ -16,12 +16,14 @@
  */
 package io.jenkins.x.client.kube;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
+ *
  */
-public class PipelineAttachment extends DtoSupport {
+public class PipelineAttachment extends DtoSupport implements Serializable {
     private String name;
     private List<String> urls = new ArrayList<>();
 

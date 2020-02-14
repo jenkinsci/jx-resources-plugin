@@ -384,11 +384,10 @@ public class BuildSyncRunListener extends RunListener<Run> {
             spec.setAuthor(author);
         }
         if (isBlank(spec.getLastCommitMessage())) {
-            spec.setLastCommitMessage(author);
+            spec.setLastCommitMessage(lastCommitMessage);
         }
-
         if (Strings.empty(spec.getLastCommitSHA())) {
-            spec.setLastCommitSHA(lastCommitMessage);
+            spec.setLastCommitSHA(sha);
         }
 
         String jenkinsURL = jenkinsURL(kubeClient, namespace);

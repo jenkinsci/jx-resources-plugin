@@ -61,7 +61,7 @@ public class PipelineClient implements Closeable {
     public static PipelineClient newInstance() {
         KubernetesClient client = new DefaultKubernetesClient();
         String ns = client.getNamespace();
-        Objects.nonNull(ns);
+        Objects.requireNonNull(ns);
         return newInstance(client, ns);
     }
 

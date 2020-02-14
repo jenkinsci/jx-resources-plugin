@@ -23,7 +23,7 @@ import java.net.URL;
  *
  */
 public class GitURLParser {
-    protected static String gitPrefix = "git@";
+    protected static final String gitPrefix = "git@";
 
     public static GitURLInfo parse(String text) {
         // lets turn git://host/path URLs into a real URLs java can parse
@@ -64,7 +64,7 @@ public class GitURLParser {
         // This is necessary for Bitbucket Server in other cases
         trimPath = trimPath.replace("/projects/", "/");
         trimPath = trimPath.replace("/repos/", "/");
-        trimPath.replaceAll("/pull.*/[0-9]+$", "");
+        trimPath = trimPath.replaceAll("/pull.*/[0-9]+$", "");
 
         // Remove leading and trailing slashes so that splitting on "/" won't result
         // in empty strings at the beginning & end of the array.

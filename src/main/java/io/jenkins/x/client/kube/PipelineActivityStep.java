@@ -18,10 +18,12 @@ package io.jenkins.x.client.kube;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.io.Serializable;
+
 /**
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class PipelineActivityStep {
+public class PipelineActivityStep implements Serializable {
     private String kind;
     private StageActivityStep stage;
     private PromoteActivityStep promote;

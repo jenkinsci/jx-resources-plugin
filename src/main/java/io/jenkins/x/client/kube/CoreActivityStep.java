@@ -16,9 +16,12 @@
  */
 package io.jenkins.x.client.kube;
 
+import java.io.Serializable;
+
 /**
+ *
  */
-public class CoreActivityStep extends DtoSupport {
+public class CoreActivityStep extends DtoSupport implements Serializable {
     private String name;
     private String description;
     private String status;
