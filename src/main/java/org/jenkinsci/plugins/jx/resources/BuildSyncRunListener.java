@@ -5,12 +5,17 @@ import com.cloudbees.workflow.rest.external.StageNodeExt;
 import com.cloudbees.workflow.rest.external.StatusExt;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
+import hudson.plugins.git.Branch;
 import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.Revision;
 import hudson.plugins.git.UserRemoteConfig;
+import hudson.plugins.git.util.BuildData;
 import hudson.scm.SCM;
 import hudson.triggers.SafeTimerTask;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -224,7 +229,33 @@ public class BuildSyncRunListener extends RunListener<Run> {
         String repoName = EnvironmentVariableExpander.getenv("REPO_NAME");
         String branchName = EnvironmentVariableExpander.getenv("BRANCH_NAME");
 
-        // TODO is there a better way to find the git owner/repo/branch?
+
+        // try discover the sha and branch name
+        String sha = "";
+        String lastCommitMessage = "";
+        BuildData buildData = run.getAction(BuildData.class);
+        if (buildData != null) {
+            Revision rev = buildData.getLastBuiltRevision();
+            if (rev != null) {
+                if (Strings.empty(sha)) {
+                    sha = rev.getSha1String();
+                }
+                Collection<Branch> branches = rev.getBranches();
+                if (branches.size() == 1) {
+                    for (Branch branch : branches) {
+                        String branchExpression = branch.getName();
+                        if (Strings.notEmpty(branchExpression)) {
+                            String[] paths = branchExpression.split("/");
+                            if (paths.length > 0) {
+                                branchName = paths[paths.length - 1];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // is there any other way to find the git owner/repo/branch?
         if (Strings.empty(branchName)) {
             branchName = "master";
         }
@@ -260,8 +291,8 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
         if (Strings.empty(buildNumberText)) {
             buildNumberText = EnvironmentVariableExpander.getenv("BUILD_ID");
-        } 
-        
+        }
+
         if (Strings.empty(parentFullName)) {
             parentFullName = run.getParent().getFullName();
         }
@@ -289,7 +320,7 @@ public class BuildSyncRunListener extends RunListener<Run> {
             labels.put("repository", KubernetesNames.convertToKubernetesName(repoName, false));
         }
         if (Strings.notEmpty(branchName)) {
-            labels.put("branchName", KubernetesNames.convertToKubernetesName(branchName, false));
+            labels.put("branch", KubernetesNames.convertToKubernetesName(branchName, false));
         }
         if (Strings.notEmpty(buildNumberText)) {
             labels.put("build", KubernetesNames.convertToKubernetesName(buildNumberText, false));
@@ -325,7 +356,40 @@ public class BuildSyncRunListener extends RunListener<Run> {
             spec.setGitBranch(branchName);
         }
 
-        // TODO author, lastCommitMessage
+        // lets find the user who triggered it
+        String author = "";
+        CauseAction causeAction = run.getAction(CauseAction.class);
+        if (causeAction != null) {
+            List<Cause> causes = causeAction.getCauses();
+            for (Cause cause : causes) {
+                if (cause instanceof Cause.UserIdCause) {
+                    Cause.UserIdCause userIdCause = (Cause.UserIdCause) cause;
+                    if (Strings.empty(author)) {
+                        author = userIdCause.getUserId();
+                    }
+                } else if (cause instanceof Cause.RemoteCause) {
+                    Cause.RemoteCause remoteCause = (Cause.RemoteCause) cause;
+                    if (Strings.empty(lastCommitMessage)) {
+                        lastCommitMessage = remoteCause.getShortDescription();
+                    }
+                } else if (cause instanceof Cause.UpstreamCause) {
+                    Cause.UpstreamCause upstreamCause = (Cause.UpstreamCause) cause;
+                    if (Strings.empty(lastCommitMessage)) {
+                        lastCommitMessage = upstreamCause.getShortDescription();
+                    }
+                }
+            }
+        }
+        if (isBlank(spec.getAuthor())) {
+            spec.setAuthor(author);
+        }
+        if (isBlank(spec.getLastCommitMessage())) {
+            spec.setLastCommitMessage(author);
+        }
+
+        if (Strings.empty(spec.getLastCommitSHA())) {
+            spec.setLastCommitSHA(lastCommitMessage);
+        }
 
         String jenkinsURL = jenkinsURL(kubeClient, namespace);
         if (!isBlank(jenkinsURL)) {
