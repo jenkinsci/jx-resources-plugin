@@ -55,7 +55,16 @@ public class PipelineActivitySpec implements KubernetesResource {
     private String gitUrl;
     private String gitRepository;
     private String gitOwner;
+    private String gitBranch;
+    private String author;
+    private String pullTitle;
     private String releaseNotesUrl;
+    private String lastCommitSHA;
+    private String lastCommitMessage;
+    private String lastCommitURL;
+    private String context;
+    private String baseSHA;
+    private List<PipelineAttachment> attachments = new ArrayList<>();
 
     @JsonIgnore
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
@@ -181,5 +190,77 @@ public class PipelineActivitySpec implements KubernetesResource {
 
     public void setSteps(List<PipelineActivityStep> steps) {
         this.steps = steps;
+    }
+
+    public String getGitBranch() {
+        return gitBranch;
+    }
+
+    public void setGitBranch(String gitBranch) {
+        this.gitBranch = gitBranch;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public String getPullTitle() {
+        return pullTitle;
+    }
+
+    public void setPullTitle(String pullTitle) {
+        this.pullTitle = pullTitle;
+    }
+
+    public String getLastCommitSHA() {
+        return lastCommitSHA;
+    }
+
+    public void setLastCommitSHA(String lastCommitSHA) {
+        this.lastCommitSHA = lastCommitSHA;
+    }
+
+    public String getLastCommitMessage() {
+        return lastCommitMessage;
+    }
+
+    public void setLastCommitMessage(String lastCommitMessage) {
+        this.lastCommitMessage = lastCommitMessage;
+    }
+
+    public String getLastCommitURL() {
+        return lastCommitURL;
+    }
+
+    public void setLastCommitURL(String lastCommitURL) {
+        this.lastCommitURL = lastCommitURL;
+    }
+
+    public String getContext() {
+        return context;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
+    }
+
+    public String getBaseSHA() {
+        return baseSHA;
+    }
+
+    public void setBaseSHA(String baseSHA) {
+        this.baseSHA = baseSHA;
+    }
+
+    public List<PipelineAttachment> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<PipelineAttachment> attachments) {
+        this.attachments = attachments;
     }
 }
