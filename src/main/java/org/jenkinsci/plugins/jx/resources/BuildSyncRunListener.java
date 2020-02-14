@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -322,7 +321,11 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (isBlank(spec.getGitRepository())) {
             spec.setGitRepository(repoName);
         }
-        // TODO branch, author, lastCommitMessage
+        if (isBlank(spec.getGitBranch())) {
+            spec.setGitBranch(branchName);
+        }
+
+        // TODO author, lastCommitMessage
 
         String jenkinsURL = jenkinsURL(kubeClient, namespace);
         if (!isBlank(jenkinsURL)) {
