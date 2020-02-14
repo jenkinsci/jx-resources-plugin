@@ -42,8 +42,10 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -212,9 +214,9 @@ public class BuildSyncRunListener extends RunListener<Run> {
             }
         }
 
-        KubernetesClient kubeClent = getKubernetesClient();
+        KubernetesClient kubeClient = getKubernetesClient();
         String namespace = GlobalPluginConfiguration.get().getNamespace();
-        NonNamespaceOperation<PipelineActivity, PipelineActivityList, DoneablePipelineActivities, Resource<PipelineActivity, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClent, namespace);
+        NonNamespaceOperation<PipelineActivity, PipelineActivityList, DoneablePipelineActivities, Resource<PipelineActivity, DoneablePipelineActivities>> client = ClientHelper.pipelineActivityClient(kubeClient, namespace);
 
         String parentFullName = "";
 
@@ -222,6 +224,33 @@ public class BuildSyncRunListener extends RunListener<Run> {
         String repoOwner = EnvironmentVariableExpander.getenv("REPO_OWNER");
         String repoName = EnvironmentVariableExpander.getenv("REPO_NAME");
         String branchName = EnvironmentVariableExpander.getenv("BRANCH_NAME");
+
+        // TODO is there a better way to find the git owner/repo/branch?
+        if (Strings.empty(branchName)) {
+            branchName = "master";
+        }
+
+        String gitUrl = findGitURL(run);
+        if (Strings.empty(repoOwner) || Strings.empty(repoName)) {
+            if (Strings.notEmpty(gitUrl)) {
+                GitURLInfo info = GitURLParser.parse(gitUrl);
+                if (info != null) {
+                    repoOwner = info.getOwner();
+                    repoName = info.getRepository();
+
+                }
+            }
+        }
+        if (Strings.empty(repoOwner) || Strings.empty(repoName)) {
+            // if we still can't find the owner/repo lets use the folder structure
+            String fullName = run.getParent().getFullName();
+            String[] paths = fullName.split("/");
+            if (paths.length == 2) {
+                repoOwner = paths[0];
+                repoName = paths[1];
+            }
+        }
+
         if (Strings.notEmpty(repoOwner) && Strings.notEmpty(repoName) && Strings.notEmpty(branchName)) {
             parentFullName = repoOwner + "/" + repoName + "/" + branchName;
         }
@@ -250,6 +279,23 @@ public class BuildSyncRunListener extends RunListener<Run> {
             activity.setMetadata(new ObjectMetaBuilder().withName(name).build());
             create = true;
         }
+        Map<String, String> labels = activity.getMetadata().getLabels();
+        if (labels == null) {
+            labels = new HashMap<>();
+        }
+        if (Strings.notEmpty(repoOwner)) {
+            labels.put("owner", KubernetesNames.convertToKubernetesName(repoOwner, false));
+        }
+        if (Strings.notEmpty(repoName)) {
+            labels.put("repository", KubernetesNames.convertToKubernetesName(repoName, false));
+        }
+        if (Strings.notEmpty(branchName)) {
+            labels.put("branchName", KubernetesNames.convertToKubernetesName(branchName, false));
+        }
+        if (Strings.notEmpty(buildNumberText)) {
+            labels.put("build", KubernetesNames.convertToKubernetesName(buildNumberText, false));
+        }
+        activity.getMetadata().setLabels(labels);
         PipelineActivitySpec spec = activity.getSpec();
         if (spec == null) {
             spec = new PipelineActivitySpec();
@@ -270,8 +316,15 @@ public class BuildSyncRunListener extends RunListener<Run> {
         if (isBlank(spec.getBuild())) {
             spec.setBuild(buildNumberText);
         }
+        if (isBlank(spec.getGitOwner())) {
+            spec.setGitOwner(repoOwner);
+        }
+        if (isBlank(spec.getGitRepository())) {
+            spec.setGitRepository(repoName);
+        }
+        // TODO branch, author, lastCommitMessage
 
-        String jenkinsURL = jenkinsURL(kubeClent, namespace);
+        String jenkinsURL = jenkinsURL(kubeClient, namespace);
         if (!isBlank(jenkinsURL)) {
             if (isBlank(spec.getBuildUrl())) {
                 spec.setBuildUrl(createBuildUrl(jenkinsURL, parentFullName, buildNumberText));
@@ -282,7 +335,6 @@ public class BuildSyncRunListener extends RunListener<Run> {
         }
 
         if (isBlank(spec.getGitUrl())) {
-            String gitUrl = findGitURL(run);
             if (!isBlank(gitUrl)) {
                 spec.setGitUrl(gitUrl);
             }
