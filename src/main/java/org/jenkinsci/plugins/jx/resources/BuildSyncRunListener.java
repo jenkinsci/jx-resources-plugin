@@ -323,7 +323,7 @@ public class BuildSyncRunListener extends RunListener<Run> {
             labels.put("branch", KubernetesNames.convertToKubernetesName(branchName, false));
         }
         if (Strings.notEmpty(buildNumberText)) {
-            labels.put("build", KubernetesNames.convertToKubernetesName(buildNumberText, false));
+            labels.put("build", buildNumberText);
         }
         activity.getMetadata().setLabels(labels);
         PipelineActivitySpec spec = activity.getSpec();
