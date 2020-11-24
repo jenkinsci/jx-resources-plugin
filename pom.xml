@@ -14,7 +14,7 @@
   <packaging>hpi</packaging>
   <name>JX Resources Plugin</name>
   <description>A plugin which uses Kubernetes Resources for storage of pipeline state</description>
-  <url>https://wiki.jenkins.io/display/JENKINS/JX+Resources+Plugin</url>
+  <url>https://github.com/jenkinsci/jx-resources-plugin</url>
 
   <properties>
     <revision>1.0.38</revision>
